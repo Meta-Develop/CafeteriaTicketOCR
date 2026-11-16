@@ -1,0 +1,14 @@
+[
+  {
+    "id": 1,
+    "name": "Sample rice bowl",
+    "price": 600,
+    "type": "don"
+  },
+  {
+    "id": 2,
+    "name": "Sample noodles",
+    "price": 500,
+    "type": "noodle"
+  }
+]

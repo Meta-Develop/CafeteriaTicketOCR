@@ -1,0 +1,42 @@
+# Local credentials and configuration
+.env
+.env.*
+*.pem
+*.key
+firmware/include/local_config.h
+
+# Private cafeteria menu and source documents
+/data/menu.json
+/data/source/
+
+# Captures, OCR output, optional language data, and caches
+/runtime/
+/captures/
+/tessdata/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+node_modules/
+.pio/
+firmware/.pio/
+.pytest_cache/
+.mypy_cache/
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Private development context and editor state
+.agents/
+.agent
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.grok/
+.github/
+.vscode/
+.worktrees/
