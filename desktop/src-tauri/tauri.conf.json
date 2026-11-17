@@ -1,0 +1,22 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "CafeteriaTicketOCR",
+  "version": "0.1.0",
+  "identifier": "jp.meta-develop.cafeteria-ticket-ocr",
+  "build": { "frontendDist": "../ui" },
+  "app": {
+    "withGlobalTauri": true,
+    "windows": [{
+      "label": "main",
+      "title": "食券メニュー認識 / CafeteriaTicketOCR",
+      "width": 1280,
+      "height": 860,
+      "minWidth": 760,
+      "minHeight": 600
+    }],
+    "security": {
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src ipc: http://ipc.localhost; object-src 'none'; base-uri 'none'; frame-src 'none'"
+    }
+  },
+  "bundle": { "active": false, "icon": [] }
+}

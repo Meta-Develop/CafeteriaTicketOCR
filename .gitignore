@@ -29,6 +29,10 @@ firmware/.pio/
 Thumbs.db
 desktop.ini
 
+# Native desktop build output (Cargo cache is normally outside this checkout)
+/desktop/src-tauri/target/
+/desktop/src-tauri/gen/
+
 # Private development context and editor state
 .agents/
 .agent

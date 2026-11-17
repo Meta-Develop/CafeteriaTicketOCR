@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light">
+  <meta name="theme-color" content="#faf9f6">
+  <title>食券メニュー認識 · CafeteriaTicketOCR</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <svg class="icon-library" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+    <symbol id="i-ticket" viewBox="0 0 24 24"><path d="M4 5h16a1 1 0 0 1 1 1v4a2 2 0 0 0 0 4v4a1 1 0 0 1-1 1H4a1 1 0 0 1-1-1v-4a2 2 0 0 0 0-4V6a1 1 0 0 1 1-1Z"/><path d="M15 5v2m0 3v2m0 3v4M7 9h4m-4 5h4"/></symbol>
+    <symbol id="i-camera" viewBox="0 0 24 24"><path d="M8 5 6 8H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-9a2 2 0 0 0-2-2h-2l-2-3Z"/><circle cx="12" cy="14" r="4"/></symbol>
+    <symbol id="i-settings" viewBox="0 0 24 24"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="16" cy="17" r="3"/></symbol>
+    <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-6-6 6 6-6 6"/></symbol>
+    <symbol id="i-retry" viewBox="0 0 24 24"><path d="M20 10a8 8 0 1 0-1 7M20 4v6h-6"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="m6 6 12 12M6 18 18 6"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m5 12 4 4L19 6"/></symbol>
+    <symbol id="i-alert" viewBox="0 0 24 24"><path d="m10.3 4-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.7-3l-8-14a2 2 0 0 0-3.4 0Z"/><path d="M12 9v4m0 4h.01"/></symbol>
+    <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M5 5l1.5 1.5m11 11L19 19M5 19l1.5-1.5m11-11L19 5"/></symbol>
+  </svg>
+
+  <header class="app-header">
+    <a class="brand" href="#main" aria-label="食券メニュー認識 メイン画面へ">
+      <span class="brand-mark"><svg class="icon"><use href="#i-ticket"/></svg></span>
+      <span><span class="brand-name">食券メニュー認識</span><span class="brand-sub">CafeteriaTicketOCR</span></span>
+    </a>
+    <div class="header-actions">
+      <span id="ocr-status" class="status-pill" role="status"><span class="status-dot"></span><span id="ocr-status-text">認識を準備中</span></span>
+      <button id="settings-open" class="button button-quiet" type="button" aria-haspopup="dialog" aria-controls="settings-dialog"><svg class="icon"><use href="#i-settings"/></svg><span>カメラ設定</span></button>
+    </div>
+  </header>
+
+  <main id="main" class="workspace">
+    <div id="app-error" class="app-error" role="alert" hidden><svg class="icon"><use href="#i-alert"/></svg><p id="app-error-text"></p><button id="app-retry" class="button button-small" type="button">再試行</button></div>
+    <section class="camera-section" aria-labelledby="camera-heading">
+      <div class="section-heading"><div><span class="eyebrow">CAMERA</span><h1 id="camera-heading">食券をカメラにかざす</h1></div><span id="camera-status" class="camera-status" role="status"><span class="status-dot"></span><span id="camera-status-text">接続を確認中</span></span></div>
+      <div class="camera-card">
+        <div id="preview" class="preview">
+          <canvas id="camera-canvas" aria-label="カメラのライブ映像" hidden></canvas>
+          <div id="live-label" class="live-label" hidden><span></span>ライブ</div>
+          <div id="frame-guide" class="frame-guide" aria-hidden="true" hidden><i></i><i></i><i></i><i></i></div>
+          <div id="camera-empty" class="camera-empty" role="status">
+            <span id="camera-empty-symbol" class="empty-camera"><svg class="icon"><use href="#i-camera"/></svg></span>
+            <h2 id="camera-empty-title">カメラを確認しています</h2>
+            <p id="camera-empty-message">接続したUSBカメラを自動で開きます。</p>
+            <button id="camera-retry" class="button button-on-dark" type="button" hidden><svg class="icon"><use href="#i-retry"/></svg><span>もう一度接続</span></button>
+          </div>
+          <div id="preview-note" class="preview-note" hidden>食券の文字がはっきり見える位置に合わせてください</div>
+        </div>
+        <div class="camera-caption"><span><svg class="icon"><use href="#i-camera"/></svg><span id="device-label">USBカメラ</span></span><span id="camera-meta">接続待ち</span></div>
+      </div>
+      <div id="camera-warning" class="camera-warning" role="status" hidden><svg class="icon"><use href="#i-alert"/></svg><p>カメラの一部の設定を適用・確認できませんでした。</p><button id="camera-warning-settings" class="button button-small" type="button">設定を確認</button></div>
+      <div id="dark-banner" class="dark-banner" role="status" hidden><svg class="icon"><use href="#i-sun"/></svg><div><strong>映像が暗いようです</strong><p id="dark-message">明るさを優先すると、文字が見やすくなります。</p></div><button id="brightness-priority" class="button button-small" type="button">明るさを優先</button></div>
+      <div class="scan-area"><button id="scan-button" class="scan-button" type="button" disabled><svg id="scan-icon" class="icon"><use href="#i-camera"/></svg><span id="scan-label">撮影して認識</span><kbd>Enter</kbd></button><p id="scan-help" class="scan-help">カメラと認識の準備ができると撮影できます。</p></div>
+    </section>
+
+    <section id="result-panel" class="result-panel" aria-labelledby="result-heading" aria-busy="false">
+      <div class="result-header"><div><span class="eyebrow">RESULT</span><h2 id="result-heading">認識結果</h2></div><span id="result-time" class="result-time"></span></div>
+      <div id="result-content" class="result-content" aria-live="polite" aria-atomic="true">
+        <div id="result-empty" class="result-empty"><div class="ticket-illustration" aria-hidden="true"><svg class="icon"><use href="#i-ticket"/></svg></div><h3>食券から、メニューを。</h3><p>カメラに食券をかざして<br>「撮影して認識」を押してください。</p><span class="result-empty-line"></span><p class="result-tip">文字全体を写すと<br>認識しやすくなります。</p></div>
+        <div id="result-busy" class="result-busy" hidden><span class="spinner" aria-hidden="true"></span><h3>食券を読み取っています</h3><p>カメラの映像はそのまま確認できます。</p></div>
+        <div id="result-data" class="result-data" hidden><span id="result-badge" class="result-badge"><svg class="icon"><use id="result-symbol" href="#i-check"/></svg><span id="result-status"></span></span><h3 id="product-name" class="product-name"></h3><p id="product-price" class="product-price" hidden><span id="price-number"></span><span class="price-unit">円</span></p><p id="result-message" class="result-message"></p><button id="result-retry" class="button result-retry" type="button" hidden><svg class="icon"><use href="#i-retry"/></svg>もう一度撮影</button><p id="result-elapsed" class="result-elapsed"></p></div>
+      </div>
+      <details id="ocr-details" class="ocr-details" hidden><summary>読み取った文字を確認<span aria-hidden="true">＋</span></summary><pre id="ocr-text"></pre></details>
+      <div class="result-footer"><span class="privacy-dot"></span>この端末内で認識します</div>
+    </section>
+    <footer class="workspace-footer"><span>① 食券を写す<span aria-hidden="true"> → </span>② 撮影して認識<span aria-hidden="true"> → </span>③ 結果を確認</span><span>USBカメラを接続して、すぐに。</span></footer>
+  </main>
+
+  <dialog id="settings-dialog" class="settings-dialog" aria-labelledby="settings-heading">
+    <div class="drawer-header"><div><span class="eyebrow">CAMERA SETTINGS</span><h2 id="settings-heading">カメラ設定</h2></div><button id="settings-close" class="button icon-button" type="button" aria-label="カメラ設定を閉じる"><svg class="icon"><use href="#i-close"/></svg></button></div>
+    <div class="drawer-body">
+      <section class="setting-section"><h3>使用するカメラ</h3><label class="field-label" for="camera-select">USBカメラ</label><select id="camera-select" disabled><option value="">カメラを確認中</option></select><button id="camera-connect" class="button button-secondary" type="button" disabled>このカメラに接続</button><p id="settings-camera-note" class="field-hint">カメラを接続すると自動で映像を表示します。</p></section>
+      <section class="setting-section"><h3>映像の調整</h3><fieldset id="exposure-options" class="exposure-options" disabled><legend>写り方</legend><label class="mode-option"><input type="radio" name="exposure-mode" value="short" checked><span><strong>動きを優先</strong><small>最短の露光で、手ぶれを抑えます</small></span><span class="recommend">おすすめ</span></label><label class="mode-option"><input type="radio" name="exposure-mode" value="auto"><span><strong>明るさを優先</strong><small>明るさを自動で調整します</small></span></label><label class="mode-option"><input id="manual-mode" type="radio" name="exposure-mode" value="manual"><span><strong>手動で調整</strong><small>露光時間を指定します</small></span></label></fieldset>
+      <div id="manual-exposure" class="manual-exposure" hidden><label class="field-label" for="exposure-input">露光時間 <span>µs</span></label><input id="exposure-input" type="number" inputmode="numeric" step="1" disabled><p id="exposure-bounds" class="field-hint"></p></div>
+      <div class="gain-field"><label class="field-label" for="gain-input">明るさの補正 <output id="gain-value" for="gain-input">—</output></label><input id="gain-input" type="range" disabled><div class="range-labels"><span id="gain-min">—</span><span id="gain-max">—</span></div><p id="gain-hint" class="field-hint">カメラの対応範囲を確認中です。</p></div>
+      <p id="settings-readback" class="settings-readback">接続後に現在の設定を表示します。</p></section>
+      <p id="settings-error" class="settings-error" role="alert" hidden></p><p id="settings-feedback" class="settings-feedback" role="status"></p>
+    </div>
+    <div class="drawer-footer"><p>調整した値は「設定を適用」で反映されます。</p><button id="settings-apply" class="button button-apply" type="button" disabled>設定を適用</button></div>
+  </dialog>
+</body>
+</html>
