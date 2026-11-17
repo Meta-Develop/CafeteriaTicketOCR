@@ -21,11 +21,17 @@ fn main() {
         let service = Backend::launch(Arc::new(|_, _| {}));
         let result = tauri::async_runtime::block_on(
             service.request(serde_json::json!({"action": "status"})),
-        );
+        )
+        .and_then(|status| {
+            tauri::async_runtime::block_on(
+                service.request(serde_json::json!({"action": "set_live", "enabled": false})),
+            )?;
+            Ok(status)
+        });
         service.stop("アプリケーションを終了しました。");
         match result {
             Ok(status) => println!(
-                "native_sidecar_check: ok (ocr_ready={}, menu_count={})",
+                "native_sidecar_check: ok (ocr_ready={}, menu_count={}, set_live=ok)",
                 status["ocr"]["ready"], status["ocr"]["menu_count"]
             ),
             Err(error) => {

@@ -5,6 +5,7 @@ from collections import deque
 import json
 import math
 import os
+import re
 import sys
 import threading
 import time
@@ -16,6 +17,7 @@ for _name in ("OMP_NUM_THREADS", "OPENBLAS_NUM_THREADS", "MKL_NUM_THREADS", "NUM
 
 from camera_stream import CameraStream, list_devices
 from recognition import capture_and_recognize, ocr_status
+from live_recognition import LiveRecognition, validate_live
 
 
 class Outbox:
@@ -47,7 +49,7 @@ class Outbox:
 
     def emit(self, name, payload):
         message = {"event": name, "payload": payload}
-        if name == "recognition_result":
+        if name in {"recognition_result", "ticket_detected", "live_recognition"}:
             self.send(message)
         else:
             with self.condition:
@@ -87,7 +89,8 @@ class Outbox:
 
 _ACTION_FIELDS = {
     "status": set(), "start_camera": {"device"}, "stop_camera": set(),
-    "set_camera": {"exposure_mode", "exposure_us", "gain"},
+    "set_camera": {"exposure_mode", "exposure_us", "gain", "controls"},
+    "set_live": {"enabled", "confirm_passes", "dedup_gap", "roi", "scale"},
     "recognize": set(), "shutdown": set(),
 }
 
@@ -117,12 +120,21 @@ def validate_request(request):
         raise ValueError("変更するカメラ設定を指定してください。")
     if request.get("exposure_mode") == "manual" and "exposure_us" not in request:
         raise ValueError("手動露出の時間を指定してください。")
+    if "controls" in request:
+        controls = request["controls"]
+        if (not isinstance(controls, dict) or not 1 <= len(controls) <= 32
+                or any(not isinstance(key, str) or not re.fullmatch(r"[a-z][a-z0-9_]{0,63}", key)
+                       or type(value) is not int or not -1_000_000_000 <= value <= 1_000_000_000
+                       for key, value in controls.items())):
+            raise ValueError("カメラ設定の指定が無効です。")
+    if action == "set_live":
+        validate_live({key: value for key, value in request.items() if key in _ACTION_FIELDS[action]})
     return action
 
 
 class BackendService:
     def __init__(self, outbox, *, camera=None, devices=list_devices, readiness=ocr_status,
-                 recognize=capture_and_recognize):
+                 recognize=capture_and_recognize, live=None):
         self.outbox = outbox
         self.camera = camera if camera is not None else CameraStream(outbox.emit, devices=devices)
         self.devices = devices
@@ -132,11 +144,14 @@ class BackendService:
         self.closing = False
         self.job = None
         self.lock = threading.Lock()
+        self.live = live if live is not None else LiveRecognition(self.camera, outbox.emit, readiness=readiness)
+        self.live.start()
 
     def status(self):
         with self.lock:
             busy = self.busy
-        return {"camera": self.camera.snapshot(), "devices": self.devices(), "ocr": self.readiness(), "busy": busy}
+        return {"camera": self.camera.snapshot(), "devices": self.devices(), "ocr": self.readiness(),
+                "busy": busy, "live": self.live.snapshot()}
 
     def handle(self, request):
         request_id = request.get("id") if isinstance(request, dict) else None
@@ -157,7 +172,11 @@ class BackendService:
                 result = self.status()
             elif action == "set_camera":
                 result = self.camera.set_controls({key: value for key, value in request.items() if key in _ACTION_FIELDS[action]})
+            elif action == "set_live":
+                result = self.live.configure({key: value for key, value in request.items() if key in _ACTION_FIELDS[action]})
             elif action == "recognize":
+                if self.live.snapshot()["enabled"]:
+                    raise ValueError("ライブ認識を一時停止してから撮影してください。")
                 with self.lock:
                     if self.busy:
                         raise ValueError("認識中です。結果を待ってから撮影してください。")
@@ -204,6 +223,7 @@ class BackendService:
 
     def close(self):
         self.closing = True
+        self.live.close()
         self.camera.stop()
         if self.job:
             self.job.join(timeout=1.0)

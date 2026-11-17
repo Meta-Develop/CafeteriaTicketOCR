@@ -22,6 +22,7 @@ RAPIDOCR_MODELS = {
 }
 _RAPIDOCR_ENGINE = None
 _ENGINE_LOCK = threading.Lock()
+_INFERENCE_LOCK = threading.Lock()
 
 
 def rapidocr_model_paths() -> dict[str, Path]:
@@ -90,10 +91,10 @@ def transcribe_ocr_text(text: str) -> str:
     return "\n".join(lines).strip()
 
 
-def recognize_image(raw_path: Path, engine=None, menu_path: Path = MENU_DATABASE_PATH) -> dict:
+def recognize_image(raw_path, engine=None, menu_path: Path = MENU_DATABASE_PATH) -> dict:
     from ocr_menu import select_best_menu_item
-    with contextlib.redirect_stdout(sys.stderr):
-        output = (engine or get_rapidocr_engine())(str(raw_path), use_cls=False)
+    with _INFERENCE_LOCK, contextlib.redirect_stdout(sys.stderr):
+        output = (engine or get_rapidocr_engine())(str(raw_path) if isinstance(raw_path, Path) else raw_path, use_cls=False)
     texts = getattr(output, "txts", None)
     scores = getattr(output, "scores", None)
     text = transcribe_ocr_text("\n".join(str(value) for value in texts)) if texts is not None else ""
@@ -105,6 +106,7 @@ def recognize_image(raw_path: Path, engine=None, menu_path: Path = MENU_DATABASE
         "name": item.name if item else None,
         "price": item.price if item else None,
         "score": selection.score if item else None,
+        "exact_name": bool(item and selection.name_score >= 1),
         "text": text,
         "confidence": sum(values) / len(values) if values else None,
         "message": "メニューが見つかりました。" if item else "該当するメニューが見つかりません。券全体を明るく写して、もう一度お試しください。",
@@ -119,23 +121,29 @@ def capture_and_recognize(frame, capture_id: str, capture_dir: Path = CAPTURE_DI
               "score": None, "text": "", "confidence": None, "elapsed_ms": 0,
               "message": "認識できませんでした。もう一度お試しください。"}
     raw_path = capture_dir / f"{capture_id}_raw.png"
+    if any((capture_dir / f"{capture_id}{suffix}").exists()
+           for suffix in ("_raw.png", "_ocr_result.txt", "_result.json")):
+        raise FileExistsError("capture id already exists")
     try:
         capture_dir.mkdir(parents=True, exist_ok=True)
-        if not cv2.imwrite(str(raw_path), frame):
+        ok, encoded = cv2.imencode(".png", frame)
+        if not ok:
             raise OSError("capture write failed")
+        with raw_path.open("xb") as output:
+            output.write(encoded.tobytes())
         result.update(recognize(raw_path))
     except Exception as exc:
         # Exception messages may contain private OCR text or local data.
         print(f"recognition failed: {type(exc).__name__}", file=sys.stderr)
     result["elapsed_ms"] = round((time.monotonic() - started) * 1000)
     try:
-        raw_path.with_name(f"{capture_id}_ocr_result.txt").write_text(
-            (result["name"] or "") + ("\n" if result["name"] else ""), encoding="utf-8")
+        with raw_path.with_name(f"{capture_id}_ocr_result.txt").open("x", encoding="utf-8") as output:
+            output.write((result["name"] or "") + ("\n" if result["name"] else ""))
     except OSError:
         result.update(status="error", message="撮影結果を保存できません。保存先の空き容量と権限を確認してください。")
     try:
-        raw_path.with_name(f"{capture_id}_result.json").write_text(
-            json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n", encoding="utf-8")
+        with raw_path.with_name(f"{capture_id}_result.json").open("x", encoding="utf-8") as output:
+            output.write(json.dumps(result, ensure_ascii=False, indent=2, allow_nan=False) + "\n")
     except (OSError, ValueError):
         result.update(status="error", message="撮影結果を保存できません。保存先の空き容量と権限を確認してください。")
     return result

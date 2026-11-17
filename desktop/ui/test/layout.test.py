@@ -18,7 +18,7 @@ gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gtk, WebKit2
 
 fixture = json.loads(subprocess.check_output(
-    ["node", str(Path(__file__).with_suffix(".cjs"))], text=True, timeout=5
+    ["node", str(Path(__file__).with_suffix(".cjs")), "--fixture"], text=True, timeout=5
 ))
 # Xvfb defaults to 100 dpi; use CSS's 96 dpi for exact viewport assertions.
 Gtk.Settings.get_default().set_property("gtk-xft-dpi", 96 * 1024)

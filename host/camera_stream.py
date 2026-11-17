@@ -17,7 +17,7 @@ def empty_camera() -> dict:
     return {"connected": False, "session_id": None, "device": None, "stream_fps": 0.0, "preview_fps": 0.0,
             "width": 0, "height": 0, "exposure_us": None, "min_exposure_us": None,
             "gain": None, "gain_min": None, "gain_max": None, "auto_exposure": False,
-            "brightness": None, "error": None}
+            "brightness": None, "controls": {}, "error": None}
 
 
 def list_devices() -> list[dict]:
@@ -93,6 +93,7 @@ class CameraStream:
         self.session_id = None
         self.frame = None
         self.frame_time = 0.0
+        self.frame_id = 0
         self.stop_event = threading.Event()
         self.restart_event = threading.Event()
         self.thread = None
@@ -121,11 +122,13 @@ class CameraStream:
             state = dict(self.state)
             self.emit("camera_state", state)
 
-    def latest_frame(self):
+    def latest_frame(self, *, after=None, with_metadata=False):
         with self.lock:
-            if not self.state["connected"] or self.frame is None or time.monotonic() - self.frame_time > self.freeze_seconds:
+            if (not self.state["connected"] or self.frame is None or self.frame_id == after
+                    or time.monotonic() - self.frame_time > self.freeze_seconds):
                 return None
-            return self.frame.copy()
+            frame = self.frame.copy()
+            return (frame, self.frame_id, self.session_id) if with_metadata else frame
 
     def start(self, device=None):
         available = self.devices()
@@ -173,13 +176,14 @@ class CameraStream:
         if not self.thread or not self.thread.is_alive() or self.stop_event.is_set():
             raise ValueError("USBカメラを接続してから設定してください。")
         with self.lock:
-            self.settings.update(request)
-            self.pending = dict(self.settings)
+            self.settings.update({key: value for key, value in request.items() if key != "controls"})
+            extra = {**(self.pending or {}).get("controls", {}), **request.get("controls", {})}
+            self.pending = {**self.settings, **({"controls": extra} if extra else {})}
         return {"accepted": True}
 
     def _watch(self, stop_event, restart_event):
         next_readback = time.monotonic() + 1.0
-        while not stop_event.wait(0.25):
+        while not stop_event.wait(0.05):
             now = time.monotonic()
             with self.lock:
                 if stop_event.is_set() or stop_event is not self.stop_event:
@@ -192,18 +196,24 @@ class CameraStream:
                     self._state(important=True, session=session, connected=False, stream_fps=0.0, preview_fps=0.0,
                                 error="カメラの映像が止まりました。USB接続を確認してください。自動で再接続します。")
                 connected = self.state["connected"]
-            if now >= next_readback and connected and self.controls_lock.acquire(blocking=False):
+            if connected and self.controls_lock.acquire(blocking=False):
                 try:
                     if self.active_controls is not None:
-                        actual = self.active_controls.query()
-                        if not stop_event.is_set():
-                            self._read_controls(actual, self.snapshot()["error"], important=False, session=session)
+                        with self.lock:
+                            request, self.pending = self.pending, None
+                        if request is not None:
+                            self._apply_locked(self.active_controls, request, session=session)
+                        elif now >= next_readback:
+                            actual = self.active_controls.query()
+                            if not stop_event.is_set():
+                                self._read_controls(actual, self.snapshot()["error"], important=False, session=session)
+                        if request is not None or now >= next_readback:
+                            next_readback = now + 1.0
                 except (RuntimeError, OSError, ValueError):
                     if not stop_event.is_set():
                         self._state(session=session, error="露出・ゲインの読戻しを取得できません。")
                 finally:
                     self.controls_lock.release()
-                next_readback = now + 1.0
 
     def _read_controls(self, controls, error=None, *, important=True, session=None):
         exposure = _control(controls, "exposure_time_absolute", "exposure_absolute")
@@ -216,7 +226,9 @@ class CameraStream:
                     gain=gain.value if gain else None, gain_min=gain.minimum if gain else None,
                     gain_max=gain.maximum if gain else None,
                     auto_exposure=bool(auto and auto.value is not None and manual is not None and auto.value != manual),
-                    error=error)
+                    controls={name: {"kind": control.kind, "min": control.minimum, "max": control.maximum,
+                                     "step": control.step, "value": control.value, "flags": control.flags,
+                                     "choices": control.choices} for name, control in controls.items()}, error=error)
 
     def _apply(self, controls, request, *, session=None):
         with self.controls_lock:
@@ -233,15 +245,20 @@ class CameraStream:
             report = controls.apply(UsbControls(auto=mode == "auto",
                 exposure="min" if mode == "short" else str(int(exposure)) if exposure is not None else "min",
                 gain=str(int(gain)) if gain is not None else ""))
+            if request.get("controls"):
+                controls.apply_values(request["controls"])
             actual = controls.query()
             error = "このカメラでは一部の露出・ゲイン設定を適用できません。対応する設定で続行してください。" if "ERROR:" in report else None
             if gain is None and "gain" in request:
                 error = "このカメラではゲインを調整できません。"
             self._read_controls(actual, error, session=session)
         except (RuntimeError, OSError, ValueError):
-            self._state(important=True, session=session, exposure_us=None, min_exposure_us=None, gain=None,
-                        gain_min=None, gain_max=None, auto_exposure=False,
-                        error="露出・ゲインを取得できません。カメラの対応状況と v4l2-ctl を確認してください。")
+            message = "カメラ設定を適用・確認できません。対応範囲と v4l2-ctl を確認してください。"
+            try:
+                self._read_controls(controls.query(), message, session=session)
+            except (RuntimeError, OSError, ValueError):
+                self._state(important=True, session=session, exposure_us=None, min_exposure_us=None, gain=None,
+                            gain_min=None, gain_max=None, auto_exposure=False, controls={}, error=message)
 
     def _run(self, device, stop_event, restart_event):
         while not stop_event.is_set():
@@ -272,10 +289,6 @@ class CameraStream:
                 next_preview = 0.0
                 while not stop_event.is_set() and not restart_event.is_set():
                     with self.lock:
-                        request, self.pending = self.pending, None
-                    if request is not None:
-                        self._apply(controls, request, session=session)
-                    with self.lock:
                         self.read_started = time.monotonic()
                     ok, frame = capture.read()
                     with self.lock:
@@ -290,6 +303,7 @@ class CameraStream:
                         if session != self.session_id:
                             break
                         self.frame, self.frame_time = frame, now
+                        self.frame_id += 1
                     frames += 1
                     payload = None
                     if now >= next_preview:

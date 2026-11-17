@@ -113,6 +113,10 @@ fn project_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
 }
 
 fn diagnostics(root: &std::path::Path) -> Option<File> {
+    // A headless check must not truncate diagnostics owned by a running app.
+    if std::env::args().nth(1).as_deref() == Some("--check-sidecar") {
+        return None;
+    }
     let path = root.join(".agents/storage/tauri-rebuild");
     std::fs::create_dir_all(&path).ok()?;
     let mut options = OpenOptions::new();
@@ -247,9 +251,13 @@ impl Backend {
                                 preview.camera_state(payload, &emit);
                             }
                         }
-                        "recognition_result" if valid_recognition(payload) => {
+                        "recognition_result" | "ticket_detected" if valid_recognition(payload) => {
                             emit(event, payload.clone())
                         }
+                        "live_recognition" if valid_live_recognition(payload) => {
+                            emit(event, payload.clone())
+                        }
+                        "live_state" if valid_live_state(payload) => emit(event, payload.clone()),
                         _ => break "認識バックエンドのイベント形式が正しくありません。",
                     }
                 } else if let Some(id) = message.get("id").and_then(Value::as_u64) {
@@ -352,7 +360,15 @@ fn validate_request(request: &Value) -> Result<&str, String> {
     let fields: &[&str] = match action {
         "status" | "stop_camera" | "recognize" | "shutdown" => &["action"],
         "start_camera" => &["action", "device"],
-        "set_camera" => &["action", "exposure_mode", "exposure_us", "gain"],
+        "set_camera" => &["action", "exposure_mode", "exposure_us", "gain", "controls"],
+        "set_live" => &[
+            "action",
+            "enabled",
+            "confirm_passes",
+            "dedup_gap",
+            "roi",
+            "scale",
+        ],
         _ => return Err("対応していない操作です。".into()),
     };
     if object.keys().any(|key| !fields.contains(&key.as_str())) {
@@ -373,15 +389,65 @@ fn validate_request(request: &Value) -> Result<&str, String> {
     }
     for field in ["exposure_us", "gain"] {
         if let Some(value) = object.get(field) {
-            if !value
-                .as_f64()
-                .is_some_and(|v| (0.0..=1_000_000_000.0).contains(&v))
-            {
+            if !value.as_f64().is_some_and(|v| {
+                ((if field == "gain" {
+                    -1_000_000_000.0
+                } else {
+                    0.0
+                })..=1_000_000_000.0)
+                    .contains(&v)
+            }) {
                 return Err(bad());
             }
         }
     }
-    if action == "set_camera" && object.len() == 1 {
+    if action == "set_camera"
+        && object.get("exposure_mode").is_some_and(|m| m == "manual")
+        && !object.contains_key("exposure_us")
+    {
+        return Err(bad());
+    }
+    if let Some(controls) = object.get("controls") {
+        let values = controls.as_object().ok_or_else(bad)?;
+        if values.is_empty()
+            || values.len() > 32
+            || values.iter().any(|(key, value)| {
+                key.is_empty()
+                    || key.len() > 64
+                    || !key.as_bytes()[0].is_ascii_lowercase()
+                    || !key
+                        .bytes()
+                        .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'_')
+                    || !value
+                        .as_i64()
+                        .is_some_and(|v| (-1_000_000_000..=1_000_000_000).contains(&v))
+            })
+        {
+            return Err(bad());
+        }
+    }
+    if action == "set_live" {
+        if object.get("enabled").is_some_and(|v| !v.is_boolean())
+            || object
+                .get("confirm_passes")
+                .is_some_and(|v| !v.as_u64().is_some_and(|n| n <= 10))
+        {
+            return Err(bad());
+        }
+        for (field, min, max) in [
+            ("dedup_gap", 0.1, 30.0),
+            ("roi", 0.1, 1.0),
+            ("scale", 0.1, 1.0),
+        ] {
+            if object.get(field).is_some_and(|v| {
+                !v.as_f64()
+                    .is_some_and(|n| n.is_finite() && (min..=max).contains(&n))
+            }) {
+                return Err(bad());
+            }
+        }
+    }
+    if matches!(action, "set_camera" | "set_live") && object.len() == 1 {
         return Err(bad());
     }
     Ok(action)
@@ -438,6 +504,35 @@ fn valid_recognition(v: &Value) -> bool {
             .all(|k| v.get(*k).is_some_and(nullable_number))
         && v["elapsed_ms"].is_number()
 }
+fn valid_live_state(v: &Value) -> bool {
+    v["enabled"].is_boolean()
+        && v["running"].is_boolean()
+        && v.get("error").is_some_and(nullable_string)
+        && v["confirm_passes"].as_u64().is_some_and(|n| n <= 10)
+        && [
+            ("dedup_gap", 0.1, 30.0),
+            ("roi", 0.1, 1.0),
+            ("scale", 0.1, 1.0),
+        ]
+        .iter()
+        .all(|(key, min, max)| {
+            v[*key]
+                .as_f64()
+                .is_some_and(|n| n.is_finite() && (*min..=*max).contains(&n))
+        })
+}
+fn valid_live_recognition(v: &Value) -> bool {
+    matches!(v["status"].as_str(), Some("matched" | "no_match"))
+        && v["text"].is_string()
+        && v.get("name").is_some_and(nullable_string)
+        && ["price", "score"]
+            .iter()
+            .all(|k| v.get(*k).is_some_and(nullable_number))
+        && ["ocr_latency_ms", "passes_per_second", "timestamp_ms"]
+            .iter()
+            .all(|k| v[*k].as_f64().is_some_and(|n| n >= 0.0))
+        && v["session_id"].as_str().is_some_and(|s| !s.is_empty())
+}
 fn validate_response(action: &str, message: &Value) -> Reply {
     match message["ok"].as_bool() {
         Some(false) => {
@@ -464,9 +559,11 @@ fn validate_response(action: &str, message: &Value) -> Reply {
                     && result["ocr"]["ready"].is_boolean()
                     && result["ocr"]["menu_count"].is_u64()
                     && result["ocr"].get("error").is_some_and(nullable_string)
+                    && valid_live_state(&result["live"])
             }
             "recognize" => result["accepted"] == true && result["capture_id"].is_string(),
             "set_camera" | "shutdown" => result["accepted"] == true,
+            "set_live" => result["accepted"] == true && valid_live_state(result),
             _ => false,
         };
     if valid {
@@ -619,6 +716,45 @@ mod tests {
             &json!({"action":"set_camera","exposure_mode":"short","gain":24})
         )
         .is_ok());
+    }
+
+    #[test]
+    fn live_settings_and_native_controls_are_validated() {
+        for request in [
+            json!({"action":"set_live"}),
+            json!({"action":"set_live","enabled":1}),
+            json!({"action":"set_live","confirm_passes":1.5}),
+            json!({"action":"set_live","confirm_passes":11}),
+            json!({"action":"set_live","dedup_gap":0}),
+            json!({"action":"set_live","roi":1.1}),
+            json!({"action":"set_live","scale":0}),
+            json!({"action":"set_live","path":"private"}),
+            json!({"action":"set_camera","controls":{"gain;exec":1}}),
+            json!({"action":"set_camera","controls":{"gain":true}}),
+            json!({"action":"set_camera","controls":{}}),
+            json!({"action":"set_camera","exposure_mode":"manual"}),
+        ] {
+            assert!(validate_request(&request).is_err(), "{request}");
+        }
+        assert!(
+            validate_request(&json!({"action":"set_live","enabled":false,
+            "confirm_passes":0,"dedup_gap":1.5,"roi":0.75,"scale":0.5}))
+            .is_ok()
+        );
+        assert!(validate_request(&json!({"action":"set_camera","gain":-10,
+            "controls":{"brightness":-4,"focus_auto":0}}))
+        .is_ok());
+        let live = json!({"enabled":true,"running":false,"error":null,
+            "confirm_passes":0,"dedup_gap":1.5,"roi":1,"scale":1,"accepted":true});
+        assert!(validate_response("set_live", &json!({"ok":true,"result":live})).is_ok());
+        assert!(valid_live_state(&live));
+        let pass = json!({"status":"matched","name":"カレー","price":350,"score":1.1,
+            "text":"カレー","session_id":"A","ocr_latency_ms":34,
+            "passes_per_second":20,"timestamp_ms":1});
+        assert!(valid_live_recognition(&pass));
+        let mut invalid = pass;
+        invalid["session_id"] = Value::Null;
+        assert!(!valid_live_recognition(&invalid));
     }
     #[test]
     fn rejects_malformed_responses_and_forwards_errors() {

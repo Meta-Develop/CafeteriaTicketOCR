@@ -22,7 +22,7 @@ from camera_stream import empty_camera
 from test_usb_camera import wait_for
 
 ROOT = Path(__file__).resolve().parent.parent
-SCRATCH = ROOT / ".agents/temp/tauri-rebuild/backend-tests"
+SCRATCH = Path("/native/local/tmp/ctocr-realtime/backend-tests")
 
 
 class RecordingOutbox:
@@ -68,7 +68,7 @@ class ProtocolTests(unittest.TestCase):
         return backend.BackendService(self.outbox, camera=self.camera,
             devices=lambda: [{"id": "/dev/video4", "label": "sample"}],
             readiness=readiness or (lambda: {"ready": True, "menu_count": 2, "error": None}),
-            recognize=recognize or Mock())
+            recognize=recognize or Mock(), live=Mock(snapshot=lambda: {"enabled": False}))
 
     def test_status_start_set_stop_shutdown_and_release(self):
         service = self.make_service()
@@ -236,6 +236,14 @@ class RecognitionTests(unittest.TestCase):
             self.assertEqual(result["name"], "カレー" if expected == "matched" else None)
             self.assertEqual(result["price"], 350 if expected == "matched" else None)
             self.assertEqual(result["text"], text)
+
+    def test_in_memory_frame_uses_same_selector_without_a_temporary_image(self):
+        frame = np.zeros((40, 80, 3), np.uint8)
+        engine = Mock(return_value=SimpleNamespace(txts=["カレー 350円"], scores=[0.9]))
+        result = recognition.recognize_image(frame, engine, self.menu)
+        self.assertIs(engine.call_args.args[0], frame)
+        self.assertTrue(result["exact_name"])
+        self.assertEqual((result["name"], result["price"]), ("カレー", 350))
 
     def test_png_full_resolution_result_and_errors_preserved_without_log_text(self):
         frame = np.zeros((720, 1280, 3), np.uint8)

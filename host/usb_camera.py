@@ -121,6 +121,23 @@ class V4L2Controls:
     def query(self) -> dict[str, Control]:
         return parse_controls(self._run("--list-ctrls-menus"))
 
+    def apply_values(self, values: dict[str, int]) -> None:
+        """Validate native names, ranges, flags and menu holes before driver writes."""
+        controls = self.query()
+        for name, value in values.items():
+            control = controls.get(name)
+            if (control is None or control.kind not in {"int", "bool", "menu", "intmenu"}
+                    or any(flag in control.flags for flag in ("disabled", "read-only", "inactive"))):
+                raise ValueError("このカメラ設定は現在変更できません。")
+            control.requested_value(str(value))
+            if control.choices and value not in control.choices:
+                raise ValueError("カメラ設定の選択値が無効です。")
+        for name, value in values.items():
+            self._run(f"--set-ctrl={name}={value}")
+        actual = self.query()
+        if any(name not in actual or actual[name].value != value for name, value in values.items()):
+            raise RuntimeError("カメラの設定値を確認できません。")
+
     def apply(self, request: UsbControls) -> str:
         controls = self.query()
         errors: list[str] = []
