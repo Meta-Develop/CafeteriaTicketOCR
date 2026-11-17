@@ -78,7 +78,11 @@ fn project_paths() -> Result<(PathBuf, PathBuf, PathBuf), String> {
         .unwrap_or_else(|| PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../.."))
         .canonicalize()
         .map_err(|_| "プロジェクトの場所を確認できません。".to_string())?;
-    let python = root.join(".venv/bin/python");
+    let python = root.join(if cfg!(windows) {
+        ".venv/Scripts/python.exe"
+    } else {
+        ".venv/bin/python"
+    });
     let backend = root.join("host/desktop_backend.py");
     if !root.join(".venv/pyvenv.cfg").is_file()
         || !root.join("desktop/src-tauri/tauri.conf.json").is_file()

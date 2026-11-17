@@ -12,6 +12,8 @@ from recognition import (
 
 
 def main() -> None:
+    if sys.platform == "win32":
+        raise SystemExit("On Windows, use scripts\\run.bat [--setup|--check] to launch or check the desktop app.")
     launcher = Path(__file__).resolve().parent.parent / "scripts" / "run_app.sh"
     os.execv("/usr/bin/env", ["env", "bash", str(launcher), *sys.argv[1:]])
 

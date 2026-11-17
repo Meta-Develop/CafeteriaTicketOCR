@@ -1,97 +1,127 @@
 # CafeteriaTicketOCR
 
-Desktop camera OCR prototype for reading cafeteria ticket or menu images and
-matching recognized text against known local menu candidates. The Python app
-provides camera capture, OCR, candidate selection, and saved OCR transcripts.
-The M5Stack TimerCamera-F firmware is a separate companion project.
+A Tauri desktop app (Rust + HTML/CSS/JavaScript) with a Python sidecar for
+continuous, real-time Japanese OCR from a USB camera. RapidOCR PP-OCRv4 runs
+locally through ONNX Runtime and matches recognized text against a local menu
+database. Recognition does not use a cloud service.
 
-## Current status
+Matching normalizes text and common OCR errors, compares menu names against
+individual lines and the full text, and uses price and category hints. Weak
+or ambiguous matches are rejected.
 
-The imported application is an existing local prototype. During this copy,
-`host/ocr_menu.py` and the private `data/menu.json` were found to contain
-NUL-filled tails beginning at byte 4096. Their original bytes are preserved;
-the OCR module cannot currently compile and the private menu cannot be parsed
-as JSON. Recover both from a known-good source before launching the app. The
-original README also had a damaged tail; this README replaces it in this copy.
-
-This setup does not establish recognition accuracy on physical tickets or any
-integration with a school server. GUI, camera, network, and firmware operation
-have not been verified for this copy.
+Automatic ticket detection uses configurable consecutive confirmation passes
+(`0` selects adaptive confirmation) and a per-item deduplication gap (default
+1.5 seconds). A detected item must be absent from recognition results for that
+gap before it can be detected again. Confirmed detections save a full-resolution
+PNG, a selected-name text file, and a JSON result containing the OCR text under
+`runtime/captures/`. The UI shows current OCR, recognition timing, and detection
+history. Exposure, gain, and other supported V4L2 controls apply while dragging;
+available ranges and values come from the camera. Recognition can be paused,
+and the OCR region and processing scale can be adjusted.
 
 ## Layout
 
-```text
-host/                   Python desktop app and menu matching module
-host/requirements.txt   Python dependencies
-scripts/                Linux and Windows launchers
-firmware/               Separate TimerCamera-F PlatformIO project
-data/menu.example.json  Harmless menu format example
-data/menu.json          Private local runtime menu (ignored)
-data/source/            Private source documents such as XLSX (ignored)
-runtime/captures/       Local captures and OCR output (ignored)
-runtime/tessdata/       Optional local Tesseract language data (ignored)
-```
+| Path | Purpose |
+| --- | --- |
+| `desktop/src-tauri/` | Rust desktop shell, sidecar bridge, and native build helper |
+| `desktop/ui/` | HTML/CSS/JavaScript interface and Node tests |
+| `host/` | Python sidecar, USB capture, OCR, menu matching, and unit tests |
+| `host/requirements.txt` | Python dependencies |
+| `scripts/` | Linux and Windows launchers |
+| `data/menu.example.json` | Public sample menu format |
+| `data/menu.json` | Private local menu database (ignored) |
+| `data/source/` | Private source documents (ignored; not read by the app) |
+| `runtime/captures/` | Saved captures and recognition results (ignored) |
+| `firmware/` | Separate, optional TimerCamera-F project |
 
 ## Local menu
 
-The app reads `data/menu.json`; it does not read the source XLSX directly.
-Keep the copied school menu and source workbook private. To prepare a demo
-menu, first preserve any existing `data/menu.json` separately, then copy
-`data/menu.example.json` to `data/menu.json` and edit the entries. Use an array
-of objects with `id`, `name`, `price`, and `type` fields. This supplies example
-data only; recovering the damaged OCR module is still required.
+Create `data/menu.json` as a UTF-8 JSON array of objects with `id`, `name`,
+`price`, and `type` fields; see [data/menu.example.json](data/menu.example.json)
+for sample data. `name` must be nonempty, `id` and `price` are nonnegative
+integers, and `price` is in yen. `type` is a text category such as `don`,
+`noodle`, or `other`. A nonempty menu is required for recognition readiness.
+Keep the real menu, source documents, captures, and OCR results private and
+ignored. The app does not read source workbooks directly.
 
-Do not publish the actual menu, source workbook, images, or OCR transcripts
-without the data owner's authorization. They are excluded from Git by default.
+## Linux setup and launch
 
-## Desktop launch
+Provide Python 3.11+, `uv`, Rust/Cargo, a C/C++ build toolchain, `pkg-config`,
+GTK 3 (>=3.24), WebKitGTK 4.1 (>=2.40) and JavaScriptCoreGTK 4.1 development
+files, and `v4l2-ctl`. The camera path uses Linux V4L2 and requires permission
+to access the USB video device.
 
-Use Python 3.11 or newer with the packages in `host/requirements.txt`, Tkinter,
-and the native libraries required by OpenCV. `rapidocr` is the default engine;
-Tesseract and suitable language data are needed for the Tesseract engine.
-
-After restoring the damaged files, the existing Linux launcher supports:
+From the repository root:
 
 ```bash
-./scripts/run_app.sh
+./scripts/run_app.sh --setup
 ./scripts/run_app.sh --check
+./scripts/run_app.sh
 ```
 
-The launcher needs `uv` and `nix-shell`. On its first run it creates `.venv`
-and installs dependencies; `nix-shell` may fetch native libraries. `--check`
-checks imports without opening the GUI, but can still perform that environment
-setup. Dependencies and OCR models are not bundled in this copy.
+- `--setup` creates `.venv` with `uv venv --system-site-packages` if needed,
+  installs `host/requirements.txt` with `uv pip`, initializes Japanese RapidOCR
+  with model downloads permitted, checks OCR/menu readiness, and checks the
+  native SDK. It does not open the app or install the native SDK.
+- `--check` requires an existing `.venv`, initializes OCR using local models,
+  checks OCR/menu readiness, and checks the native SDK. It performs no downloads
+  or installs and opens no window or camera.
+- Plain run requires `.venv`, builds the native debug binary using
+  `desktop/src-tauri/build-native.sh --build`, sets `CAFETERIA_PROJECT_ROOT`,
+  and launches it. The helper uses offline, locked Cargo dependencies, one
+  build job at low priority, and a build cache outside the checkout. Populate
+  the Cargo dependency cache beforehand; Python setup does not fetch crates.
 
-On Windows, run:
+The native helper checks installed SDK files and can reuse already available
+Nix store development outputs. It does not invoke `nix-shell` or download SDKs.
+`host/app.py` is a compatibility entry point that forwards to the Linux launcher.
+
+## Windows launcher
+
+Provide Python 3.11+, Rust/Cargo, and the native Tauri Windows prerequisites
+(Microsoft C++ build tools and WebView2). From the repository root:
 
 ```bat
+scripts\run.bat --setup
+scripts\run.bat --check
 scripts\run.bat
 ```
 
-That launcher installs dependencies with an available Python interpreter before
-opening the app. With an already prepared environment, the direct commands are:
+The batch file creates `.venv` if missing using `py -3`, falling back to `python`
+when the launcher is unavailable. Only `--setup` installs `host\requirements.txt`
+with pip and permits OCR model downloads. Both `--setup` and `--check` run the
+same Python import and OCR/menu readiness check as the Linux launcher, without
+opening the app. Plain run executes
+`cargo build --manifest-path desktop\src-tauri\Cargo.toml`, sets
+`CAFETERIA_PROJECT_ROOT`, and launches the debug executable from
+`desktop\src-tauri\target\debug\` (or `CARGO_TARGET_DIR` when set). Cargo may
+fetch missing dependencies. The sidecar uses `.venv\Scripts\python.exe`.
+Use the batch file on Windows; `host/app.py` prints guidance instead of starting Bash.
+
+The Windows launcher is untested on Windows. Camera discovery, capture, and
+controls currently use Linux device paths and V4L2; Windows camera support is
+not implemented by this launcher fix.
+
+## Tests
+
+Run from the repository root with dependencies and cached native build inputs
+already available. Node.js is required for the UI tests.
 
 ```bash
-python -m pip install -r host/requirements.txt
-python host/app.py
+(cd host && ../.venv/bin/python -B -m unittest discover -p 'test_*.py')
+(cd desktop/ui && node test/frontend.test.cjs && node test/layout.test.cjs)
+bash desktop/src-tauri/build-native.sh --test
 ```
 
-Camera modes in the existing app include USB, TimerCamera-F HTTP, and XIAO
-still-image/UDP transports. For TimerCamera-F HTTP mode, supply the camera's
-local address; see the firmware documentation for endpoint details.
+These checks cover Python logic, a mocked DOM/Tauri bridge, structural layout,
+and Rust bridge validation without opening a GUI or a real camera. They do not
+establish recognition accuracy on real tickets or hardware acceptance.
 
-## Firmware
+## Optional firmware and limitations
 
-`firmware/` is an independent PlatformIO project. Run build commands from that
-directory and follow [firmware/README.md](firmware/README.md) for hardware,
-local WiFi configuration, and HTTP endpoints. No firmware build or flash was
-performed during project setup. Keep `firmware/include/local_config.h` local;
-only its placeholder example is included.
+[firmware/README.md](firmware/README.md) describes a separate TimerCamera-F
+PlatformIO project. It is optional and is not used by the USB-only desktop app.
+Keep its WiFi configuration private.
 
-## Local artifacts
-
-Captures were preserved under `runtime/captures/` as ignored local data.
-Virtual environments, PlatformIO output, optional Tesseract data, credentials,
-and development context are not bundled. Restore optional dependencies and
-local settings separately. Review the candidate Git files before the first
-commit or any publication.
+Recognition accuracy on real tickets and school-server integration are
+unverified.
