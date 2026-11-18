@@ -1,0 +1,800 @@
+[
+    {
+        "id": 1,
+        "name": "高専品川パワー丼",
+        "price": 600,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 45,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 2,
+        "name": "塩だれカツ丼",
+        "price": 500,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 3,
+        "name": "味噌カツ丼",
+        "price": 500,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 4,
+        "name": "和風おろしカツ丼",
+        "price": 500,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 5,
+        "name": "ミートソースカツ丼",
+        "price": 500,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 40,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 6,
+        "name": "新潟たれカツ丼",
+        "price": 500,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 40,
+        "available_days": [
+            3
+        ]
+    },
+    {
+        "id": 9,
+        "name": "唐揚げマーボー丼",
+        "price": 530,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 45,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 10,
+        "name": "とり唐南蛮丼",
+        "price": 530,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 45,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 11,
+        "name": "唐揚げ親子丼",
+        "price": 530,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 45,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 12,
+        "name": "塩だれ唐揚げ丼",
+        "price": 530,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 45,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 13,
+        "name": "唐揚げハニーマスタード丼",
+        "price": 530,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 45,
+        "available_days": [
+            4
+        ]
+    },
+    {
+        "id": 17,
+        "name": "カレーライスS",
+        "price": 290,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 15,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 18,
+        "name": "カレーライスM",
+        "price": 340,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 15,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 19,
+        "name": "カレーライスL",
+        "price": 420,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 15,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 20,
+        "name": "カツカレーS",
+        "price": 460,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 21,
+        "name": "カツカレーM",
+        "price": 520,
+        "type": "don",
+        "soldout": true,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 22,
+        "name": "カツカレーL",
+        "price": 600,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 25,
+        "name": "唐揚げカレーS",
+        "price": 460,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 26,
+        "name": "唐揚げカレーM",
+        "price": 520,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 27,
+        "name": "唐揚げカレーL",
+        "price": 600,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 28,
+        "name": "チーズカレーS",
+        "price": 460,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 20,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 29,
+        "name": "チーズカレーM",
+        "price": 520,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 20,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 30,
+        "name": "チーズカレーL",
+        "price": 600,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 20,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 33,
+        "name": "豚塩カルビカレーS",
+        "price": 460,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 34,
+        "name": "豚塩カルビカレーM",
+        "price": 520,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 35,
+        "name": "豚塩カルビカレーL",
+        "price": 600,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 30,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 36,
+        "name": "チキンカツカレーS",
+        "price": 460,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 37,
+        "name": "チキンカツカレーM",
+        "price": 520,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 38,
+        "name": "チキンカツカレーL",
+        "price": 600,
+        "type": "don",
+        "soldout": false,
+        "cook_time": 35,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 41,
+        "name": "醤油ラーメン",
+        "price": 450,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 90,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 42,
+        "name": "辛味噌ラーメン",
+        "price": 450,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 90,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 43,
+        "name": "塩ラーメン",
+        "price": 450,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 90,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 44,
+        "name": "とんこつラーメン",
+        "price": 450,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 90,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 46,
+        "name": "台湾風まぜそば",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 120,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 47,
+        "name": "汁なし担々麺",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 120,
+        "available_days": [
+            2
+        ]
+    },
+    {
+        "id": 49,
+        "name": "味噌バターコーンラーメン",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 100,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 50,
+        "name": "塩バターコーンラーメン",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 100,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 51,
+        "name": "とんからキムチラーメン",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 120,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 52,
+        "name": "とんから唐揚げラーメン",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 120,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 53,
+        "name": "白湯唐揚げラーメン",
+        "price": 550,
+        "type": "noodle",
+        "soldout": false,
+        "cook_time": 120,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 56,
+        "name": "麺類大盛り",
+        "price": 100,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 57,
+        "name": "ライス単品200g",
+        "price": 150,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 58,
+        "name": "ライス大盛り80g",
+        "price": 80,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 59,
+        "name": "味噌汁",
+        "price": 40,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 60,
+        "name": "コーンわかめサラダ",
+        "price": 100,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 61,
+        "name": "焼きプリンタルト",
+        "price": 90,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 62,
+        "name": "桃のタルト",
+        "price": 90,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 63,
+        "name": "ブルーベリータルト",
+        "price": 90,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 64,
+        "name": "りんごのタルト",
+        "price": 90,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 65,
+        "name": "ショコラケーキ",
+        "price": 160,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 66,
+        "name": "モンブラン",
+        "price": 160,
+        "type": "other",
+        "soldout": true,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 67,
+        "name": "あまおう苺ムース",
+        "price": 160,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 68,
+        "name": "生ショコラケーキ",
+        "price": 160,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    },
+    {
+        "id": 69,
+        "name": "キャラメルナッツショート",
+        "price": 160,
+        "type": "other",
+        "soldout": false,
+        "cook_time": 0,
+        "available_days": [
+            1,
+            2,
+            3,
+            4,
+            5
+        ]
+    }
+]
